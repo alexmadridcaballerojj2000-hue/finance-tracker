@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FinanceTracker — Monitorea tus finanzas personales en Lempiras Hondureños">
+  <meta name="theme-color" content="#6C63FF">
+  <title>FinanceTracker — Tu dinero, bajo control</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+  <link rel="stylesheet" href="css/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ═══════════ LOGIN ═══════════ -->
+<div id="view-login" class="view">
+  <div class="login-card">
+    <div class="login-card__logo">
+      <div class="login-card__logo-icon">💰</div>
+      <h1>FinanceTracker</h1>
+      <p data-i18n="app_tagline">Tu dinero, bajo control</p>
+    </div>
+    <div class="features-list">
+      <div class="feature-item"><span>📊</span><span>Dashboard con gráficas en tiempo real</span></div>
+      <div class="feature-item"><span>🏦</span><span>Cuentas múltiples (banco, efectivo, tarjeta)</span></div>
+      <div class="feature-item"><span>📅</span><span>Presupuestos mensuales con alertas</span></div>
+      <div class="feature-item"><span>🎯</span><span>Metas de ahorro con seguimiento visual</span></div>
+      <div class="feature-item"><span>📥</span><span>Exportar a CSV y PDF</span></div>
+    </div>
+    <form id="login-form" style="margin-top:1.5rem;display:flex;flex-direction:column;gap:1rem">
+      <div class="form-group">
+        <label class="form-label" data-i18n="login_name_label">Tu nombre</label>
+        <input id="login-name" type="text" class="form-control"
+          data-i18n-placeholder="login_name_placeholder"
+          placeholder="¿Cómo te llamas?" required autocomplete="name">
+      </div>
+      <button type="submit" class="btn-primary" id="login-submit-btn">
+        <span data-i18n="login_btn">Comenzar →</span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════ APP SHELL ═══════════ -->
+<div id="app-shell" style="display:none">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="sidebar__logo">
+      <div class="sidebar__logo-icon">💰</div>
+      <span class="sidebar__logo-text">FinanceTracker</span>
+    </div>
+    <nav class="sidebar__nav">
+      <div class="nav-item active" data-route="dashboard">
+        <span class="nav-item__icon">📊</span>
+        <span data-i18n="nav_dashboard">Inicio</span>
+      </div>
+      <div class="nav-item" data-route="transactions">
+        <span class="nav-item__icon">💸</span>
+        <span data-i18n="nav_transactions">Transacciones</span>
+      </div>
+      <div class="nav-item" data-route="accounts">
+        <span class="nav-item__icon">🏦</span>
+        <span data-i18n="nav_accounts">Cuentas</span>
+      </div>
+      <div class="nav-item" data-route="budgets">
+        <span class="nav-item__icon">📅</span>
+        <span data-i18n="nav_budgets">Presupuestos</span>
+      </div>
+      <div class="nav-item" data-route="goals">
+        <span class="nav-item__icon">🎯</span>
+        <span data-i18n="nav_goals">Metas</span>
+      </div>
+      <div class="nav-item" data-route="reports">
+        <span class="nav-item__icon">📈</span>
+        <span data-i18n="nav_reports">Reportes</span>
+      </div>
+    </nav>
+    <div class="sidebar__bottom">
+      <div class="lang-switcher">
+        <button class="lang-btn active" data-lang="es">ES</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+      </div>
+      <button id="btn-logout" class="btn-logout" data-i18n="nav_logout">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- TOPBAR -->
+  <header id="topbar">
+    <button id="menu-toggle" aria-label="Menú">☰</button>
+    <span id="user-greeting"></span>
+  </header>
+
+  <!-- MAIN -->
+  <main id="main-content">
+
+    <!-- ── DASHBOARD ── -->
+    <section id="view-dashboard" class="view">
+      <div class="page-content">
+        <div class="page-header">
+          <h1 data-i18n="dashboard_title">Panel Principal</h1>
+        </div>
+        <div class="dashboard-grid">
+          <div class="stat-card stat-card--balance">
+            <div class="stat-card__icon">💼</div>
+            <div class="stat-card__label" data-i18n="dashboard_total_balance">Balance Total</div>
+            <div class="stat-card__value" id="dash-balance">L 0.00</div>
+          </div>
+          <div class="stat-card stat-card--income">
+            <div class="stat-card__icon">📈</div>
+            <div class="stat-card__label" data-i18n="dashboard_income">Ingresos del Mes</div>
+            <div class="stat-card__value" id="dash-income">L 0.00</div>
+          </div>
+          <div class="stat-card stat-card--expense">
+            <div class="stat-card__icon">📉</div>
+            <div class="stat-card__label" data-i18n="dashboard_expenses">Gastos del Mes</div>
+            <div class="stat-card__value" id="dash-expenses">L 0.00</div>
+          </div>
+          <div class="stat-card stat-card--net">
+            <div class="stat-card__icon">⚖️</div>
+            <div class="stat-card__label">Balance Neto</div>
+            <div class="stat-card__value" id="dash-net">L 0.00</div>
+          </div>
+        </div>
+        <div class="dashboard-charts">
+          <div class="chart-card">
+            <h3 data-i18n="dashboard_expenses_by_cat">Gastos por Categoría</h3>
+            <div class="chart-container"><canvas id="chart-donut"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3 data-i18n="dashboard_monthly_overview">Resumen Mensual</h3>
+            <div class="chart-container"><canvas id="chart-bars"></canvas></div>
+          </div>
+        </div>
+        <div class="dashboard-bottom">
+          <div class="section-card">
+            <h3 data-i18n="dashboard_recent">Movimientos Recientes</h3>
+            <div id="recent-list"></div>
+          </div>
+          <div class="section-card">
+            <h3 data-i18n="dashboard_budget_alerts">Alertas de Presupuesto</h3>
+            <div id="budget-alerts"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── TRANSACTIONS ── -->
+    <section id="view-transactions" class="view">
+      <div class="page-content">
+        <div class="page-header">
+          <h1 data-i18n="transactions_title">Transacciones</h1>
+          <button class="btn-primary" id="btn-add-tx" data-i18n="transactions_add">+ Nueva Transacción</button>
+        </div>
+        <div class="tx-toolbar">
+          <div class="search-box">
+            <input id="tx-search" type="search" data-i18n-placeholder="transactions_search" placeholder="Buscar...">
+          </div>
+          <div class="filter-chips">
+            <button class="tx-filter-btn active" data-filter="all"      data-i18n="transactions_filter_all">Todos</button>
+            <button class="tx-filter-btn"         data-filter="income"   data-i18n="transactions_filter_income">Ingresos</button>
+            <button class="tx-filter-btn"         data-filter="expense"  data-i18n="transactions_filter_expense">Gastos</button>
+            <button class="tx-filter-btn"         data-filter="transfer" data-i18n="transactions_filter_transfer">Transferencias</button>
+          </div>
+          <select id="tx-account-filter" class="select-control"><option value="">Todas las cuentas</option></select>
+        </div>
+        <div id="transactions-list"></div>
+      </div>
+    </section>
+
+    <!-- ── ACCOUNTS ── -->
+    <section id="view-accounts" class="view">
+      <div class="page-content">
+        <div class="page-header">
+          <h1 data-i18n="accounts_title">Mis Cuentas</h1>
+          <button class="btn-primary" id="btn-add-account" data-i18n="accounts_add">+ Nueva Cuenta</button>
+        </div>
+        <div class="glass-card" style="padding:1.25rem 1.75rem;margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,rgba(108,99,255,.15),rgba(0,217,163,.1));border-color:rgba(108,99,255,.3)">
+          <div>
+            <div class="label" data-i18n="dashboard_total_balance">Balance Total</div>
+            <div id="accounts-total-balance" style="font-size:2rem;font-weight:800;margin-top:4px">L 0.00</div>
+          </div>
+          <div style="font-size:3rem;opacity:.25">🏦</div>
+        </div>
+        <div id="accounts-grid"></div>
+      </div>
+    </section>
+
+    <!-- ── BUDGETS ── -->
+    <section id="view-budgets" class="view">
+      <div class="page-content">
+        <div class="page-header">
+          <h1 data-i18n="budgets_title">Presupuestos</h1>
+          <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+            <div class="month-selector">
+              <label data-i18n="budgets_month">Mes:</label>
+              <input type="month" id="budget-month-sel" class="form-control" style="width:auto">
+            </div>
+            <button class="btn-primary" id="btn-add-budget" data-i18n="budgets_add">+ Nuevo Presupuesto</button>
+          </div>
+        </div>
+        <div id="budgets-grid"></div>
+      </div>
+    </section>
+
+    <!-- ── GOALS ── -->
+    <section id="view-goals" class="view">
+      <div class="page-content">
+        <div class="page-header">
+          <h1 data-i18n="goals_title">Metas de Ahorro</h1>
+          <button class="btn-primary" id="btn-add-goal" data-i18n="goals_add">+ Nueva Meta</button>
+        </div>
+        <div id="goals-grid"></div>
+      </div>
+    </section>
+
+    <!-- ── REPORTS ── -->
+    <section id="view-reports" class="view">
+      <div class="page-content">
+        <div class="page-header">
+          <h1 data-i18n="reports_title">Reportes</h1>
+          <div class="export-btns">
+            <button class="btn-secondary" id="btn-export-csv" data-i18n="reports_export_csv">📥 Exportar CSV</button>
+            <button class="btn-primary"   id="btn-export-pdf" data-i18n="reports_export_pdf">📄 Exportar PDF</button>
+          </div>
+        </div>
+        <div class="reports-filters">
+          <div class="form-group">
+            <label class="form-label" data-i18n="reports_from">Desde</label>
+            <input type="date" id="report-from" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="reports_to">Hasta</label>
+            <input type="date" id="report-to" class="form-control">
+          </div>
+        </div>
+        <div class="reports-summary">
+          <div class="report-stat">
+            <div class="report-stat__label" data-i18n="reports_total_income">Total Ingresos</div>
+            <div class="report-stat__value" id="report-income" style="color:var(--income)">L 0.00</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat__label" data-i18n="reports_total_expenses">Total Gastos</div>
+            <div class="report-stat__value" id="report-expenses" style="color:var(--expense)">L 0.00</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat__label" data-i18n="reports_net">Balance Neto</div>
+            <div class="report-stat__value" id="report-net" style="color:var(--primary)">L 0.00</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat__label" data-i18n="reports_transactions_count">Transacciones</div>
+            <div class="report-stat__value" id="report-count">0</div>
+          </div>
+        </div>
+        <div id="report-tx-list"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ═══════════ MODALS ═══════════ -->
+
+<!-- Modal: Transacción -->
+<div id="modal-transaction" class="modal-overlay">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="modal-tx-title">Nueva Transacción</h2>
+      <button class="modal__close" onclick="document.getElementById('modal-transaction').classList.remove('open');document.body.style.overflow=''">✕</button>
+    </div>
+    <div class="modal__body">
+      <div class="form-group">
+        <label class="form-label" data-i18n="form_type">Tipo</label>
+        <select id="tx-type" class="form-control">
+          <option value="expense" data-i18n="form_expense">Gasto</option>
+          <option value="income"  data-i18n="form_income">Ingreso</option>
+          <option value="transfer" data-i18n="form_transfer">Transferencia</option>
+        </select>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" data-i18n="form_amount">Monto (L.)</label>
+          <input id="tx-amount" type="number" class="form-control" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="form_date">Fecha</label>
+          <input id="tx-date" type="date" class="form-control">
+        </div>
+      </div>
+      <div class="form-group" id="category-row">
+        <label class="form-label" data-i18n="form_category">Categoría</label>
+        <select id="tx-category" class="form-control"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="form_description">Descripción</label>
+        <input id="tx-description" type="text" class="form-control" placeholder="Ej: Supermercado La Colonia">
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="form_account">Cuenta</label>
+        <select id="tx-account" class="form-control"></select>
+      </div>
+      <div class="form-group" id="transfer-to-row" style="display:none">
+        <label class="form-label" data-i18n="form_to_account">Cuenta destino</label>
+        <select id="tx-to-account" class="form-control"></select>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn-secondary" id="btn-cancel-tx"  data-i18n="form_cancel">Cancelar</button>
+      <button class="btn-primary"   id="btn-save-tx"    data-i18n="form_save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Cuenta -->
+<div id="modal-account" class="modal-overlay">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="modal-acc-title">Nueva Cuenta</h2>
+      <button class="modal__close" onclick="document.getElementById('modal-account').classList.remove('open');document.body.style.overflow=''">✕</button>
+    </div>
+    <div class="modal__body">
+      <div class="form-group">
+        <label class="form-label" data-i18n="accounts_name">Nombre</label>
+        <input id="acc-name" type="text" class="form-control" placeholder="Ej: Banco Atlántida">
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="accounts_type">Tipo</label>
+        <select id="acc-type" class="form-control">
+          <option value="bank"    data-i18n="accounts_type_bank">Banco</option>
+          <option value="cash"    data-i18n="accounts_type_cash">Efectivo</option>
+          <option value="credit"  data-i18n="accounts_type_credit">Tarjeta de crédito</option>
+          <option value="digital" data-i18n="accounts_type_digital">Billetera digital</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="accounts_initial">Saldo inicial (L.)</label>
+        <input id="acc-initial" type="number" class="form-control" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="accounts_color">Color</label>
+        <input id="acc-color" type="color" class="form-control" value="#6C63FF" style="height:44px;cursor:pointer">
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn-secondary" id="btn-cancel-account" data-i18n="form_cancel">Cancelar</button>
+      <button class="btn-primary"   id="btn-save-account"   data-i18n="form_save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Presupuesto -->
+<div id="modal-budget" class="modal-overlay">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="modal-bud-title">Nuevo Presupuesto</h2>
+      <button class="modal__close" onclick="document.getElementById('modal-budget').classList.remove('open');document.body.style.overflow=''">✕</button>
+    </div>
+    <div class="modal__body">
+      <div class="form-group">
+        <label class="form-label" data-i18n="form_category">Categoría</label>
+        <select id="bud-category" class="form-control"></select>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" data-i18n="budgets_limit">Límite mensual (L.)</label>
+          <input id="bud-limit" type="number" class="form-control" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="budgets_month">Mes</label>
+          <input id="bud-month" type="month" class="form-control">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="budgets_alert_threshold">Alerta al (%)</label>
+        <input id="bud-threshold" type="number" class="form-control" placeholder="80" min="1" max="100">
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn-secondary" id="btn-cancel-budget" data-i18n="form_cancel">Cancelar</button>
+      <button class="btn-primary"   id="btn-save-budget"   data-i18n="form_save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Meta -->
+<div id="modal-goal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="modal-goal-title">Nueva Meta</h2>
+      <button class="modal__close" onclick="document.getElementById('modal-goal').classList.remove('open');document.body.style.overflow=''">✕</button>
+    </div>
+    <div class="modal__body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Emoji</label>
+          <input id="goal-icon" type="text" class="form-control" placeholder="🎯" maxlength="2">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="accounts_color">Color</label>
+          <input id="goal-color" type="color" class="form-control" value="#6C63FF" style="height:44px;cursor:pointer">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nombre de la meta</label>
+        <input id="goal-name" type="text" class="form-control" placeholder="Ej: Vacaciones en Roatán">
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" data-i18n="goals_target">Meta (L.)</label>
+          <input id="goal-target" type="number" class="form-control" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="goals_saved">Ya ahorrado (L.)</label>
+          <input id="goal-current" type="number" class="form-control" placeholder="0.00" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="goals_deadline">Fecha límite</label>
+        <input id="goal-deadline" type="date" class="form-control">
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn-secondary" id="btn-cancel-goal" data-i18n="form_cancel">Cancelar</button>
+      <button class="btn-primary"   id="btn-save-goal"   data-i18n="form_save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SCRIPTS ═══════════ -->
+<script src="js/utils.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/db.js"></script>
+<script src="js/modules.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/export.js"></script>
+<script src="js/router.js"></script>
+<script src="js/app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
